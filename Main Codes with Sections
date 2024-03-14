@@ -1,0 +1,158 @@
+
+Tester Code
+clear all;
+clc;
+close all;
+
+a = arduino("COM7","Uno");
+
+%% PIN MODES
+configurePin(a,'D12','DigitalOutput');
+AIN2 = configurePin(a,'D12');
+
+configurePin(a,'D11','DigitalOutput');
+AIN1 = configurePin(a,'D11');
+
+configurePin(a,'D9','DigitalOutput');
+BIN2 = configurePin(a,'D9');
+
+configurePin(a,'D10','DigitalOutput');
+BIN1 = configurePin(a,'D10');
+
+configurePin(a,'D8','DigitalOutput');
+PWMB = configurePin(a,'D8');
+
+configurePin(a,'D13','DigitalOutput');
+PWMA = configurePin(a,'D13');
+
+configurePin(a,'D7','Pullup');
+SW_PIN = configurePin(a,'D7');
+
+configurePin(a,'A0','AnalogInput');
+LIGHT_PIN = configurePin(a,'A0');
+
+%% CONSTANTS
+
+SEARCH_DRIVE_TIME = 200;
+TURN_DRIVE_TIME = 200;
+MOVE_DRIVE_TIME = 300;
+STOP_DRIVE_TIME = 200;
+NUM_LIGHT_LEVELS = 3;
+
+%% MAIN CODE
+light_levels=NUM_LIGHT_LEVELS;
+if readDigitalPin(a,'D7') == 0
+    drive(0,255)
+    pause(SEARCH_DRIVE_TIME)
+    drive(0,0);
+    pause(STOP_DRIVE_TIME)
+    light_levels{0}= readVoltage(LIGHT_PIN);
+    drive(0,-255)
+    pause(SEARCH_DRIVE_TIME)
+    drive(0,0)
+    pause(STOP_DRIVE_TIME)
+
+    drive(255, 0);
+    pause(SEARCH_DRIVE_TIME);
+    drive(0, 0);
+    pause(STOP_DRIVE_TIME);
+    light_levels(2) = readVoltage(LIGHT_PIN);
+    drive(-255, 0);
+    pause(SEARCH_DRIVE_TIME);
+    drive(0, 0);
+    pause(STOP_DRIVE_TIME);
+
+    light_levels(1) = readVoltage(LIGHT_PIN);
+    max_light = 0;
+    max_light_index = 0;
+    for i=0:1:2
+        if light_levels(i) > max_light
+            max_light = light_levels(i);
+            max_light_index = i;
+        end
+        fprintf("");
+        fprintf("Max light: ");
+        fprintf(max_light_index);
+    end
+
+    if  max_light_index == 0
+        fprintf("Chasing light to the left");
+        drive(-100, 255);
+        pause(TURN_DRIVE_TIME);
+        drive(255, 255);
+        pause(MOVE_DRIVE_TIME);
+        drive(0, 0);
+        delay(STOP_DRIVE_TIME);
+    elseif ( max_light_index == 1 )
+        fprintf("Chasing light straight ahead");
+        drive(255, 255);
+        pause(MOVE_DRIVE_TIME);
+        drive(0, 0);
+        pause(STOP_DRIVE_TIME);
+    else
+        fprintf("Chasing light to the right");
+        drive(255, -100);
+        pause(TURN_DRIVE_TIME);
+        drive(255, 255);
+        pause(MOVE_DRIVE_TIME);
+        drive(0, 0);
+        pause(STOP_DRIVE_TIME);
+    end
+else
+    drive(0, 0);
+end
+%% If switch is not flipped, do nothing
+ Left Motor Function
+function l_m(motorspeed)
+
+a = arduino("COM7","Uno");
+
+if (motorspeed > 0)
+    writeDigitalPin(a,'D10',1);
+    writeDigitalPin(a,'D9',0);
+elseif (motorspeed < 0)
+    writeDigitalPin(a,'D10',0);
+    writeDigitalPin(a,'D9',1);
+else
+    writeDigitalPin(a,'D10',0)
+    writeDigitalPin(a,'D9',0)
+end
+
+writePWMVoltage(a,'D8',abs(motorspeed));
+
+end
+
+Right Motor Function
+function r_m(motorspeed)
+
+a = arduino("COM7","Uno");
+
+if (motorspeed > 0)
+
+    writeDigitalPin(a,'D11',1);
+    writeDigitalPin(a,'D12',0);
+
+elseif (motorspeed < 0)
+
+    writeDigitalPin(a,'D11',0);
+    writeDigitalPin(a,'D12',1);
+
+else
+    writeDigitalPin(a,'D11',0)
+    writeDigitalPin(a,'D12',0)
+end
+
+writePWMVoltage(a,'D13',abs(motorspeed));
+
+end
+
+
+
+Drive Function
+function drive (leftSpeed,  rightSpeed)
+
+l_m(leftSpeed);
+
+r_m(rightSpeed);
+
+end
